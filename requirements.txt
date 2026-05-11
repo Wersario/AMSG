@@ -1,0 +1,9 @@
+Django>=5.0
+channels>=4.0
+channels-redis>=4.1
+psycopg2-binary>=2.9
+python-dotenv>=1.0
+pytest>=8.0
+pytest-django>=4.8
+uvicorn[standart]>=0.30
+websockets>=12.0

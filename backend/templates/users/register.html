@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: #0a0a0f;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    overflow: hidden;
+  }
+
+  .bg-grid {
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .glow {
+    position: fixed;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: pulse 4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  }
+
+  .card {
+    position: relative;
+    width: 400px;
+    background: #111118;
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 48px 40px;
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 28px;
+    color: #fff; letter-spacing: -1px; margin-bottom: 4px;
+  }
+  .logo span { color: #6366f1; }
+
+  .subtitle {
+    font-size: 11px; color: rgba(255,255,255,0.3);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+
+  .error-msg {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #f87171; font-size: 12px;
+    padding: 10px 14px; margin-bottom: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .field { margin-bottom: 20px; }
+
+  label {
+    display: block; font-size: 10px;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(255,255,255,0.35); margin-bottom: 8px;
+  }
+
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #fff;
+    font-family: 'DM Mono', monospace; font-size: 14px;
+    padding: 12px 14px; outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  input:focus { border-color: #6366f1; background: rgba(99,102,241,0.05); }
+  input::placeholder { color: rgba(255,255,255,0.15); }
+
+  .btn {
+    width: 100%; margin-top: 8px; padding: 13px;
+    background: #6366f1; border: none; color: #fff;
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase;
+    cursor: pointer; transition: background 0.2s, transform 0.1s;
+  }
+  .btn:hover { background: #4f46e5; }
+  .btn:active { transform: scale(0.99); }
+
+  .login-link {
+    margin-top: 24px; text-align: center;
+    font-size: 12px; color: rgba(255,255,255,0.25);
+  }
+  .login-link a { color: #6366f1; text-decoration: none; transition: color 0.2s; }
+  .login-link a:hover { color: #818cf8; }
+</style>
+
+<div class="bg-grid"></div>
+<div class="glow"></div>
+
+<div class="card">
+  <div class="logo">AM<span>S</span>G</div>
+  <div class="subtitle">Создать аккаунт</div>
+
+  {% if error %}
+    <div class="error-msg">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/register/">
+    {% csrf_token %}
+    <div class="field">
+      <label for="username">Имя пользователя</label>
+      <input type="text" id="username" name="username"
+             value="{{ username|default:'' }}"
+             placeholder="your_username" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="password">Пароль</label>
+      <input type="password" id="password" name="password"
+             placeholder="••••••••" autocomplete="new-password" required>
+    </div>
+    <div class="field">
+      <label for="password2">Повторите пароль</label>
+      <input type="password" id="password2" name="password2"
+             placeholder="••••••••" autocomplete="new-password" required>
+    </div>
+    <button type="submit" class="btn">Зарегистрироваться</button>
+  </form>
+
+  <div class="login-link">
+    Уже есть аккаунт? <a href="/">Войти</a>
+  </div>
+</div>
+{% endblock %}

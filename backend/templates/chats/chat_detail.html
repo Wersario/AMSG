@@ -1,0 +1,501 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: #0a0a0f;
+    font-family: 'DM Mono', monospace;
+    color: #e2e2e8;
+    overflow: hidden;
+  }
+
+  .bg-grid {
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .layout { display: flex; height: 100vh; position: relative; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 260px; flex-shrink: 0;
+    background: #0e0e16;
+    border-right: 1px solid rgba(255,255,255,0.07);
+    display: flex; flex-direction: column;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 20px;
+    color: #fff; letter-spacing: -1px;
+    text-decoration: none; display: block; margin-bottom: 2px;
+  }
+  .logo span { color: #6366f1; }
+  .user-badge { font-size: 10px; color: rgba(255,255,255,0.25); letter-spacing: 1px; }
+
+  .chat-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .chat-list::-webkit-scrollbar { width: 3px; }
+  .chat-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
+
+  .chat-item {
+    display: block; padding: 12px 20px;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .chat-item:hover { background: rgba(255,255,255,0.04); border-left-color: rgba(99,102,241,0.5); }
+  .chat-item.active { background: rgba(99,102,241,0.08); border-left-color: #6366f1; }
+  .chat-item-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 13px;
+    color: #e2e2e8; margin-bottom: 2px;
+  }
+  .chat-item.active .chat-item-title { color: #a5b4fc; }
+  .chat-item-meta { font-size: 10px; color: rgba(255,255,255,0.2); letter-spacing: 0.5px; }
+
+  .sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; gap: 8px;
+  }
+  .btn-sm {
+    flex: 1; padding: 8px 4px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.2);
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: 0.5px; cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-sm:hover { border-color: rgba(99,102,241,0.4); color: #a5b4fc; }
+  .btn-sm.danger:hover { border-color: rgba(239,68,68,0.4); color: #f87171; }
+  
+  .edit-input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid #6366f1;
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 6px 10px;
+    resize: none; outline: none;
+    min-height: 60px;
+  }
+
+  /* Chat area */
+  .chat-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  .chat-header {
+    padding: 0 28px;
+    height: 64px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+    background: rgba(14,14,22,0.6);
+    backdrop-filter: blur(10px);
+  }
+
+  .chat-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 18px;
+    letter-spacing: -0.5px; color: #fff;
+  }
+
+  .invite-badge {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 14px;
+    background: rgba(99,102,241,0.08);
+    border: 1px solid rgba(99,102,241,0.2);
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+  }
+  .invite-badge:hover { background: rgba(99,102,241,0.15); }
+  .invite-label { font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 2px; }
+  .invite-code { font-size: 15px; color: #a5b4fc; letter-spacing: 3px; font-weight: 500; }
+  .copy-hint { font-size: 9px; color: rgba(99,102,241,0.5); letter-spacing: 1px; }
+  .copied-toast {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    background: #6366f1; color: #fff;
+    font-size: 10px; padding: 4px 12px; letter-spacing: 1px;
+    white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .copied-toast.show { opacity: 1; }
+  
+ .export-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.3);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 1px;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+ }
+ 
+ .export-btn:hover { border-color: rgba(99,102,241,0.4); color: #a5b4fc; }
+ 
+ .msg-actions {
+    display: none;
+    gap: 6px;
+    margin-top: 4px;
+    padding: 0 4px;
+ }
+ .msg:hover .msg-actions { display: flex; }
+
+ .msg-action-btn {
+    font-size: 10px;
+    color: rgba(255,255,255,0.2);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.5px;
+    padding: 0;
+    transition: color 0.2s;
+ }
+ .msg-action-btn:hover { color: #a5b4fc; }
+ .msg-action-btn.del:hover { color: #f87171; }
+
+ .msg-bubble.deleted {
+    color: rgba(255,255,255,0.2) !important;
+    font-style: italic;
+    background: transparent !important;
+    border-color: rgba(255,255,255,0.04) !important;
+ }
+ .msg-edited-mark {
+    font-size: 9px;
+    color: rgba(255,255,255,0.2);
+    margin-left: 6px;
+    letter-spacing: 1px;
+ }
+
+  /* Messages */
+  .messages-wrap {
+    flex: 1; overflow-y: auto;
+    padding: 24px 28px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .messages-wrap::-webkit-scrollbar { width: 4px; }
+  .messages-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
+
+  .msg {
+    display: flex; flex-direction: column;
+    max-width: 68%;
+    animation: msgIn 0.2s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .msg.own { align-self: flex-end; align-items: flex-end; }
+  .msg.other { align-self: flex-start; align-items: flex-start; }
+
+  .msg-meta {
+    font-size: 10px; color: rgba(255,255,255,0.2);
+    margin-bottom: 4px; letter-spacing: 0.5px; padding: 0 4px;
+  }
+  .msg.own .msg-meta { color: rgba(165,180,252,0.4); }
+
+  .msg-bubble {
+    padding: 10px 14px;
+    font-size: 13px; line-height: 1.5;
+    word-break: break-word;
+  }
+  .msg.other .msg-bubble {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.07);
+    color: #d4d4e0;
+    border-radius: 0 8px 8px 8px;
+  }
+  .msg.own .msg-bubble {
+    background: rgba(99,102,241,0.2);
+    border: 1px solid rgba(99,102,241,0.3);
+    color: #c7d2fe;
+    border-radius: 8px 0 8px 8px;
+  }
+
+  .empty-chat {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: rgba(255,255,255,0.15); letter-spacing: 1px;
+  }
+
+  /* Input */
+  .input-area {
+    padding: 16px 28px 20px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex; gap: 12px; align-items: flex-end;
+    flex-shrink: 0;
+    background: rgba(10,10,15,0.8);
+  }
+
+  #msg-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    font-family: 'DM Mono', monospace; font-size: 13px;
+    padding: 11px 16px;
+    resize: none; outline: none;
+    max-height: 120px; min-height: 44px;
+    transition: border-color 0.2s;
+    line-height: 1.5;
+  }
+  #msg-input:focus { border-color: #6366f1; }
+  #msg-input::placeholder { color: rgba(255,255,255,0.15); }
+
+  #send-btn {
+    padding: 11px 20px;
+    background: #6366f1; border: none;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 13px;
+    cursor: pointer; flex-shrink: 0;
+    transition: background 0.2s, transform 0.1s;
+    height: 44px;
+  }
+  #send-btn:hover { background: #4f46e5; }
+  #send-btn:active { transform: scale(0.97); }
+  #send-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .ws-status {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #ef4444; flex-shrink: 0;
+    margin-bottom: 19px; transition: background 0.3s;
+  }
+  .ws-status.connected { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+</style>
+
+<div class="bg-grid"></div>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a class="logo" href="/chats/">AM<span>S</span>G</a>
+      <div class="user-badge">{{ request.user.username }}</div>
+    </div>
+
+    <nav class="chat-list">
+      {% for c in user_chats %}
+        <a class="chat-item {% if c.id == chat.id %}active{% endif %}" href="/chats/{{ c.id }}/">
+          <div class="chat-item-title">{{ c.title }}</div>
+          <div class="chat-item-meta">{{ c.participants.count }} уч.</div>
+        </a>
+      {% endfor %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-sm" onclick="window.location='/chats/'">← Все чаты</button>
+      <form method="post" action="/logout/" style="display:contents;">
+        {% csrf_token %}
+        <button class="btn-sm danger" type="submit">Выйти</button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="chat-area">
+    <header class="chat-header">
+      <div class="chat-title">{{ chat.title }}</div>
+      <div class="invite-badge" onclick="copyCode('{{ chat.invite_code }}', this)">
+        <div>
+          <div class="invite-label">Код приглашения</div>
+          <div class="invite-code">{{ chat.invite_code }}</div>
+        </div>
+        <div class="copy-hint">копировать</div>
+        <div class="copied-toast">Скопировано!</div>
+      </div>
+	  <a class="export-btn" href="/chats/{{ chat.id }}/export/">EXPORT</a>
+    </header>
+
+    <div class="messages-wrap" id="messages">
+      {% if messages %}
+        {% for msg in messages %}
+		  <div class="msg {% if msg.sender_username == request.user.username %}own{% else %}other{% endif %}"
+			   data-id="{{ msg.id }}"
+			   data-sender="{{ msg.sender_username }}">
+			<div class="msg-meta">
+			  {% if msg.sender_username != request.user.username %}{{ msg.sender_username }} · {% endif %}
+			  {{ msg.created_at|date:"H:i" }}
+			  {% if msg.is_edited %}<span class="msg-edited-mark">ред.</span>{% endif %}
+			</div>
+			<div class="msg-bubble {% if msg.is_deleted %}deleted{% endif %}">
+			  {% if msg.is_deleted %}сообщение удалено{% else %}{{ msg.content }}{% endif %}
+			</div>
+			{% if not msg.is_deleted %}
+			<div class="msg-actions">
+			  {% if msg.sender_username == request.user.username %}
+				<button class="msg-action-btn" onclick="startEdit(this)">редактировать</button>
+			  {% endif %}
+			  <button class="msg-action-btn del" onclick="deleteMsg(this)">удалить</button>
+			</div>
+			{% endif %}
+		  </div>
+		{% endfor %}
+      {% else %}
+        <div class="empty-chat">Пока нет сообщений — начни беседу</div>
+      {% endif %}
+    </div>
+
+    <div class="input-area">
+      <div class="ws-status" id="ws-status"></div>
+      <textarea id="msg-input" placeholder="Написать сообщение... (Enter — отправить, Shift+Enter — перенос)" rows="1"></textarea>
+      <button id="send-btn" disabled>Отправить</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const CHAT_ID = {{ chat.id }};
+  const USERNAME = "{{ request.user.username }}";
+
+  const input = document.getElementById('msg-input');
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+
+  const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const socket = new WebSocket(`${wsProto}://${location.host}/ws/chat/${CHAT_ID}/`);
+  const statusEl = document.getElementById('ws-status');
+  const sendBtn = document.getElementById('send-btn');
+
+  socket.onopen = () => { statusEl.classList.add('connected'); sendBtn.disabled = false; };
+  socket.onclose = () => { statusEl.classList.remove('connected'); sendBtn.disabled = true; };
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    appendMessage(data.sender, data.content, data.sender === USERNAME);
+  };
+
+  function appendMessage(data) {
+    const wrap = document.getElementById('messages');
+    const empty = wrap.querySelector('.empty-chat');
+    if (empty) empty.remove();
+
+    const now = new Date();
+    const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    const isOwn = data.sender === USERNAME;
+
+    const div = document.createElement('div');
+    div.className = `msg ${isOwn ? 'own' : 'other'}`;
+    div.dataset.id = data.id;
+    div.dataset.sender = data.sender;
+    div.innerHTML = `
+        <div class="msg-meta">${isOwn ? '' : escapeHtml(data.sender) + ' · '}${time}</div>
+        <div class="msg-bubble">${escapeHtml(data.content)}</div>
+        <div class="msg-actions">
+            ${isOwn ? `<button class="msg-action-btn" onclick="startEdit(this)">редактировать</button>` : ''}
+            <button class="msg-action-btn del" onclick="deleteMsg(this)">удалить</button>
+        </div>
+    `;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function startEdit(btn) {
+    const msgDiv = btn.closest('.msg');
+    const bubble = msgDiv.querySelector('.msg-bubble');
+    const current = bubble.innerText;
+    const id = msgDiv.dataset.id;
+
+    bubble.innerHTML = `
+        <textarea class="edit-input">${escapeHtml(current)}</textarea>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+            <button class="msg-action-btn" onclick="submitEdit(this, ${id})">сохранить</button>
+            <button class="msg-action-btn del" onclick="cancelEdit(this)">отмена</button>
+        </div>
+    `;
+    bubble.querySelector('textarea').focus();
+  }
+
+  function submitEdit(btn, messageId) {
+    const bubble = btn.closest('.msg-bubble');
+    const newContent = bubble.querySelector('textarea').value.trim();
+    if (!newContent) return;
+    socket.send(JSON.stringify({ action: 'edit', message_id: messageId, content: newContent }));
+  }
+
+  function cancelEdit(btn) {
+    location.reload();
+  }
+
+  function deleteMsg(btn) {
+    const msgDiv = btn.closest('.msg');
+    const id = parseInt(msgDiv.dataset.id);
+    if (!confirm('Удалить сообщение?')) return;
+    socket.send(JSON.stringify({ action: 'delete', message_id: id }));
+  }
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.action === 'send') {
+      appendMessage(data);
+    } else if (data.action === 'edit') {
+      const msgDiv = document.querySelector(`.msg[data-id="${data.id}"]`);
+      if (msgDiv) {
+        const bubble = msgDiv.querySelector('.msg-bubble');
+        bubble.innerHTML = escapeHtml(data.content);
+        let meta = msgDiv.querySelector('.msg-meta');
+        if (!meta.querySelector('.msg-edited-mark')) {
+          meta.innerHTML += '<span class="msg-edited-mark">ред.</span>';
+        }
+      }
+    } else if (data.action === 'delete') {
+      const msgDiv = document.querySelector(`.msg[data-id="${data.id}"]`);
+      if (msgDiv) {
+        msgDiv.querySelector('.msg-bubble').className = 'msg-bubble deleted';
+        msgDiv.querySelector('.msg-bubble').innerText = 'сообщение удалено';
+        const actions = msgDiv.querySelector('.msg-actions');
+        if (actions) actions.remove();
+      }
+    } else if (data.error) {
+        alert(data.error);
+    }
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function sendMessage() {
+    const content = input.value.trim();
+    if (!content || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({ content }));
+    input.value = '';
+    input.style.height = 'auto';
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function copyCode(code, el) {
+    navigator.clipboard.writeText(code).then(() => {
+      const toast = el.querySelector('.copied-toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1500);
+    });
+  }
+
+  document.getElementById('messages').scrollTop = 999999;
+</script>
+{% endblock %}

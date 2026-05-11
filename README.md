@@ -100,7 +100,7 @@ docker-compose down
 docker-compose up --build
 ```
 
-Применить новые миграции вручную:
+Создать новые миграции вручную:
 
 ```bash
 docker-compose exec python backend/manage.py makemigrations

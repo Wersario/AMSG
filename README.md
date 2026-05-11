@@ -103,19 +103,25 @@ docker-compose up --build
 Применить новые миграции вручную:
 
 ```bash
-docker-compose exec backend python manage.py migrate
+docker-compose exec python backend/manage.py makemigrations
+```
+
+Применить новые миграции вручную:
+
+```bash
+docker-compose exec python backend/manage.py migrate
 ```
 
 Создать суперпользователя:
 
 ```bash
-docker-compose exec backend python manage.py createsuperuser
+docker-compose exec python backend/manage.py createsuperuser
 ```
 
 Открыть Django shell:
 
 ```bash
-docker-compose exec backend python manage.py shell
+docker-compose exec python backend/manage.py shell
 ```
 
 ## Архитектура
